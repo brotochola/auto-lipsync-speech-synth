@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="phonemeConverter.js"></script>
+
+    <script src="utils.js"></script>
+    <script src="text-to-ipa.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -167,62 +171,18 @@
             <button id="stopSpeechBtn" disabled>Stop Speech</button>
         </div>
 
-        <div class="legend">
-            <h3>Viseme Legend:</h3>
-            <div class="legend-item">REST - Neutral mouth position</div>
-            <div class="legend-item">A - Open mouth (ah, apple)</div>
-            <div class="legend-item">E - Slightly open (eh, bed)</div>
-            <div class="legend-item">I - Narrow opening (ee, bit)</div>
-            <div class="legend-item">O - Round opening (oh, boat)</div>
-            <div class="legend-item">U - Pursed lips (oo, book)</div>
-            <div class="legend-item">M - Lips together (m, b, p)</div>
-            <div class="legend-item">F - Lip to teeth (f, v)</div>
-            <div class="legend-item">L - Tongue tip (l, n, t, d)</div>
-            <div class="legend-item">TH - Tongue between teeth (th)</div>
-            <div class="legend-item">W - Rounded lips (w, qu)</div>
-        </div>
 
-        <div class="output-section">
-            <!-- <h3>Generated Viseme Sequence:</h3>
-            <div id="visemeDisplay" class="viseme-display"></div> -->
 
-            <!-- <div class="timing-info" id="timingInfo"></div>
-
-            <h3>JSON Animation Data:</h3>
-            <div id="jsonOutput" class="output-box"></div>
-
-            <h3>Phaser.js Integration Code:</h3>
-            <div id="phaserCode" class="output-box"></div> -->
-        </div>
     </div>
 
     <script type="module">
-        let wordToPhonemes = {};
+
         const phonemeDurations = {
             'vowels': 90,
             'consonants': 45,
             'silence': 40
         };
-        // Load phonemes data asynchronously
-        async function loadPhonemesData() {
-            try {
-                const response = await fetch('./phonems.json');
-                if (!response.ok) {
-                    throw new Error(`Failed to load phonems.json: ${response.status}`);
-                }
-                wordToPhonemes = await response.json();
-                console.log('Phonemes data loaded:', wordToPhonemes);
 
-                // Initialize functionality after data is loaded
-                addFunctionality();
-
-                // Generate initial example
-                generateLipsync();
-            } catch (error) {
-                console.error('Error loading phonemes data:', error);
-                alert('Failed to load phonemes data. Please make sure phonems.json is accessible.');
-            }
-        }
 
         function addFunctionality() {
             document.getElementById('generateLipsyncBtn').addEventListener('click', generateLipsync);
@@ -231,36 +191,12 @@
         }
 
         // Basic English phoneme to viseme mapping
-        let phonemeToViseme = await fetch('./phonemeToViseme.json').then(res => res.json())
+
 
         const availableVisemes = ["A", "O", "E", "I", "U", "M", "F", "TH", "L", "S", "SH", "REST", "R", "W"]
 
         // Helper function to categorize phonemes for duration calculation
-        function getPhonemeCategory(phoneme) {
 
-            const vowels = ['AH', 'EH', 'IH', 'OH', 'UH', 'AA', 'AE', 'AO', 'AW', 'AY', 'EY', 'IY', 'OW', 'OY', 'UW'];
-            const consonants = ['B', 'CH', 'D', 'DH', 'F', 'G', 'HH', 'JH', 'K', 'L', 'M', 'N', 'NG', 'P', 'R', 'S', 'SH', 'T', 'TH', 'V', 'W', 'Y', 'Z', 'ZH'];
-
-            if (!phoneme || phoneme.toLowerCase() === 'silence' || phoneme.toLowerCase() === 'rest') {
-                return 'silence';
-            }
-
-            if (vowels.includes(phoneme.toUpperCase())) {
-                return 'vowels';
-            }
-
-            if (consonants.includes(phoneme.toUpperCase())) {
-                return 'consonants';
-            }
-
-            // Default fallback based on common patterns
-            if (phoneme.includes('AH') || phoneme.includes('EH') || phoneme.includes('IH') ||
-                phoneme.includes('OH') || phoneme.includes('UH')) {
-                return 'vowels';
-            }
-
-            return 'consonants';
-        }
 
         let currentUtterance = null;
         let animationData = null;
@@ -280,98 +216,30 @@
             const mapping = {}
             let charIndex = 0;
 
+
             for (let word of words) {
                 const wordWithoutPunctuation = word.replace(/[^\w\s]/g, '').toLowerCase()
-                const phonemes = wordToPhonemes[wordWithoutPunctuation]
-                if (phonemeToViseme[wordWithoutPunctuation]) {
 
-                    const visemes = [];
-                    const durations = [];
-                    phonemes.forEach(phoneme => {
-                        visemes.push(phonemeToViseme[phoneme] || 'REST');
-                        const category = getPhonemeCategory(phoneme);
-                        durations.push(phonemeDurations[category]);
-                    });
-                    mapping[charIndex] = {
-                        word: word,
-                        phonemes: phonemes,
-                        visemes: visemes,
-                        durations: durations
-                    }
-                } else {
-                    // Fallback for unknown words
-                    const letters = wordWithoutPunctuation.split('');
-                    const phonemes = [];
-                    const visemes = [];
-                    const durations = [];
-                    for (let i = 0; i < letters.length; i++) {
-                        let letter = letters[i];
-                        switch (letter.toLowerCase()) {
-                            case 'a': phonemes.push('AH'); break;
-                            case 'b': phonemes.push('B'); break;
-                            case 'c':
-                                if (letters[i + 1] === 'h') {
-                                    phonemes.push('SH');
-                                    i++
-                                    break;
-                                } else {
-                                    phonemes.push('K');
-                                    break;
-                                }
-                            case 'd': phonemes.push('D'); break;
-                            case 'e': phonemes.push('EH'); break;
-                            case 'f': case 'v': phonemes.push('F'); break;
-                            case 'g': phonemes.push('G'); break;
-                            case 'h': phonemes.push('REST'); break;
-                            case 'i': phonemes.push('IH'); break;
-                            case 'j': phonemes.push('REST'); break;
-                            case 'k': phonemes.push('K'); break;
-                            case 'l': phonemes.push('L'); break;
-                            case 'm': phonemes.push('M'); break;
-                            case 'n': phonemes.push('N'); break;
-                            case 'o': phonemes.push('OH'); break;
-                            case 'p': phonemes.push('P'); break;
-                            case "q": phonemes.push('K'); break;
-                            case 'r': phonemes.push('R'); break;
-                            case 's':
-                                if (letters[i + 1] === 'h') {
-                                    phonemes.push('SH');
-                                    i++
-                                    break;
-                                } else {
-                                    phonemes.push('S');
-                                    break;
-                                }
-                            case 't': phonemes.push('T'); break;
-                            case 'u': phonemes.push('UH'); break;
-                            case 'w': phonemes.push('UH'); break;
-                            case 'x': phonemes.push('S'); break;
-                            case 'y': phonemes.push('EH'); break;
-                            case 'z': phonemes.push('S'); break;
-
-                            default: phonemes.push('REST'); break;
-                        }
-
-                        const lastPhonemeAdded = phonemes[phonemes.length - 1]
-                        if (phonemes.length > 1 && lastPhonemeAdded == phonemes[phonemes.length - 2]) {
-                            phonemes.pop()
-                        } else {
-                            visemes.push(phonemeToViseme[lastPhonemeAdded] || 'REST');
-                            const category = getPhonemeCategory(lastPhonemeAdded);
-                            durations.push(phonemeDurations[category]);
-
-                        }
-
-
-
-                    }
-                    mapping[charIndex] = {
-                        word: word,
-                        phonemes: phonemes,
-                        visemes: visemes,
-                        durations: durations
-                    }
+                mapping[charIndex] = {
+                    word: word,
+                    phonemes: convertWordToPhonemes(wordWithoutPunctuation),
+                    visemes: [],
+                    durations: []
                 }
+
+
+                mapping[charIndex].phonemes.forEach(phoneme => {
+                    const viseme = convertPhonemesToVisemes(phoneme) || 'REST'
+                    mapping[charIndex].visemes.push(viseme);
+                    mapping[charIndex].durations.push(getPhonemeDuration(phoneme));
+                });
+
+
+
+
+
+
+
                 charIndex += word.length + 1; // +1 for space
             }
 
@@ -401,9 +269,7 @@
                 return;
             }
 
-            // Create word to viseme mapping for real-time sync
             wordToVisemeMap = createWordToVisemeMapping(text);
-            console.log('Word to Viseme Mapping:', wordToVisemeMap);
 
 
 
@@ -457,7 +323,7 @@
 
 
             currentUtterance.onboundary = (event) => {
-                console.log(event.charIndex, event.name)
+
 
                 if (event.name === 'word') {
                     animateWordInMouth(wordToVisemeMap[event.charIndex])
@@ -494,9 +360,21 @@
         }
 
         // Initialize  
-        document.getElementById('speechRate').addEventListener('input', updateSpeechRateDisplay);
-        updateSpeechRateDisplay();
-        loadPhonemesData();
+        function init() {
+            TextToIPA.loadDict("ipadict.txt", () => {
+                console.log("loaded")
+
+                // Initialize functionality after data is loaded
+                addFunctionality();
+
+                // Generate initial example
+                generateLipsync();
+            })
+            document.getElementById('speechRate').addEventListener('input', updateSpeechRateDisplay);
+            updateSpeechRateDisplay();
+
+        }
+        init()
 
     </script>
 
@@ -541,7 +419,7 @@
             const visemeKey = viseme.toLowerCase();
 
             // Check if the texture exists before setting it
-            console.log(visemeKey)
+
 
             mouthSprite.setTexture(`mouth_${visemeKey}`);
 

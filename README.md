@@ -2,6 +2,12 @@
 
 https://brotochola.github.io/auto-lipsync-speech-synth
 
+---
+
+TODO:
+
+## check https://github.com/Max-Davy/text-to-phonetic?tab=readme-ov-file
+
 IT ONLY WORKS IN FIREFOX, NOT IN CHROME FOR NOW
 
 ## How It Works
