@@ -1,6 +1,8 @@
+# Auto Lipsync Speech Synthesis
+
 https://brotochola.github.io/auto-lipsync-speech-synth
 
-# Auto Lipsync Speech Synthesis
+IT ONLY WORKS IN FIREFOX, NOT IN CHROME FOR NOW
 
 ## How It Works
 
