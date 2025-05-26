@@ -6,12 +6,9 @@ function convertWordToPhonemesInEnglish(word) {
   const phonemesResult = TextToIPA.lookup(word);
 
   if (!phonemesResult.error || phonemesResult.error == "multi") {
-    for (let i = 0; i < phonemesResult.text.length; i++) {
-      const phoneme = phonemesResult.text[i];
-      const arpabet = ipaToArpabet(phoneme);
-      arrRet.push(arpabet);
-    }
-    return arrRet;
+    // ipaToArpabet now returns an array of phonemes with stress markers
+    const arpabetPhonemes = ipaToArpabet(phonemesResult.text);
+    return arpabetPhonemes;
   }
   return convertWordToPhonemesWithNoDictionary(word);
 }
@@ -21,7 +18,9 @@ function convertWordToPhonemesWithNoDictionary(word) {
 }
 
 function ipaToArpabet(ipa) {
+  //tajˈmz
   const ipaToArpabetMap = {
+    // Vowels (monophthongs)
     i: "IY",
     ɪ: "IH",
     e: "EY",
@@ -32,14 +31,28 @@ function ipaToArpabet(ipa) {
     ʊ: "UH",
     u: "UW",
     ʌ: "AH",
-    ə: "ER", // or AH depending on context
+    ə: "AH", // schwa -> AH
     ɜ: "ER",
     ɝ: "ER",
+
+    // Diphthongs - handle these first as they're longer sequences
     aɪ: "AY",
     aʊ: "AW",
     ɔɪ: "OY",
-    oʊ: "OW",
+    oʊ: "OW", // This handles the "ow" sound properly
     eɪ: "EY",
+
+    // CMU IPA dictionary variations (uses 'j' instead of 'ɪ' in diphthongs)
+    aj: "AY", // CMU IPA notation for /aɪ/ (as in "times", "my", "eye")
+    aw: "AW", // CMU IPA notation for /aʊ/ (as in "how", "now")
+    oj: "OY", // CMU IPA notation for /ɔɪ/ (as in "boy", "toy")
+    ej: "EY", // CMU IPA notation for /eɪ/ (as in "day", "say")
+
+    // Handle common IPA sequences that should map to single ARPABET phonemes
+    ow: "OW", // Direct mapping for "ow" sequence
+    ou: "AW", // Alternative "ou" sound
+
+    // Consonants
     p: "P",
     b: "B",
     t: "T",
@@ -64,26 +77,75 @@ function ipaToArpabet(ipa) {
     w: "W",
     tʃ: "CH",
     dʒ: "JH",
+
+    // Handle single vowel 'o' that might appear
+    o: "OW", // Map single 'o' to OW
   };
 
-  let arpabet = "";
+  let result = [];
   let i = 0;
+  let currentStress = "";
 
   while (i < ipa.length) {
     let found = false;
-    for (const key in ipaToArpabetMap) {
+
+    // Check for stress markers first
+    if (ipa[i] === "1") {
+      currentStress = "1"; // Primary stress
+      i++;
+      continue;
+    } else if (ipa[i] === "2") {
+      currentStress = "2"; // Secondary stress
+      i++;
+      continue;
+    }
+
+    // Try to match longer sequences first (diphthongs, then consonant clusters)
+    const sortedKeys = Object.keys(ipaToArpabetMap).sort(
+      (a, b) => b.length - a.length
+    );
+
+    for (const key of sortedKeys) {
       if (ipa.startsWith(key, i)) {
-        arpabet += ipaToArpabetMap[key];
+        let arpabetPhoneme = ipaToArpabetMap[key];
+
+        // Add stress marker to vowels and diphthongs
+        const vowelPhonemes = [
+          "IY",
+          "IH",
+          "EY",
+          "EH",
+          "AE",
+          "AA",
+          "AO",
+          "UH",
+          "UW",
+          "AH",
+          "ER",
+          "AY",
+          "AW",
+          "OY",
+          "OW",
+        ];
+        if (vowelPhonemes.includes(arpabetPhoneme) && currentStress) {
+          arpabetPhoneme += currentStress;
+          currentStress = ""; // Reset stress after applying
+        }
+
+        result.push(arpabetPhoneme);
         i += key.length;
         found = true;
         break;
       }
     }
+
+    // If no pattern matched, skip the character
     if (!found) {
       i++;
     }
   }
-  return arpabet;
+
+  return result;
 }
 
 // function getPhonemeCategory(phoneme) {
@@ -184,9 +246,9 @@ function ipaToArpabet(ipa) {
 
 function convertPhonemesToVisemes(phoneme) {
   const phonemeToVisemeMap = {
+    // Monophthong vowels
     IY: "E",
     IH: "E",
-    EY: "E",
     EH: "E",
     AE: "A",
     AA: "A",
@@ -195,11 +257,16 @@ function convertPhonemesToVisemes(phoneme) {
     UW: "U",
     AH: "A",
     ER: "R",
-    AY: "A",
     OH: "O",
-    AW: "O",
-    OY: "O",
-    OW: "O",
+
+    // Diphthongs - return arrays to show transition
+    AY: ["A", "E"], // /aɪ/ - "my", "time" - transitions from open to close front
+    AW: ["A", "U"], // /aʊ/ - "how", "now" - transitions from open to close back
+    OY: ["O", "E"], // /ɔɪ/ - "boy", "toy" - transitions from mid-back to close front
+    OW: ["O", "U"], // /oʊ/ - "go", "show" - transitions from mid-back to close back
+    EY: ["E", "E"], // /eɪ/ - "day", "say" - slight transition, mostly stays in E position
+
+    // Consonants
     Q: "U",
     P: "M",
     B: "M",
@@ -223,13 +290,19 @@ function convertPhonemesToVisemes(phoneme) {
     L: "L",
     R: "R",
     Y: "E",
-    W: "U",
+    W: "W",
     CH: "SH",
     JH: "SH",
     "": "REST",
   };
 
-  return phonemeToVisemeMap[phoneme.toUpperCase()];
+  // Remove stress markers (0, 1, 2) from the phoneme before lookup
+  const cleanPhoneme = phoneme.replace(/[012]$/, "");
+
+  const result = phonemeToVisemeMap[cleanPhoneme.toUpperCase()];
+
+  // Return the result (could be a string for monophthongs or array for diphthongs)
+  return result;
 }
 
 function convertWordToPhonemesWithNoDictionary(word) {

@@ -140,7 +140,9 @@ if (typeof TextToIPA !== "object") {
             text = TextToIPA._IPADict[word + "(1)"];
           }
 
-          text = text.replace(/ˈ/g, "");
+          // Convert IPA stress markers to ARPABET-style stress markers
+          // ˈ (primary stress) -> 1, ˌ (secondary stress) -> 2
+          text = text.replace(/ˈ/g, "1").replace(/ˌ/g, "2");
 
           // Return the new word
           return new IPAWord(error, text);

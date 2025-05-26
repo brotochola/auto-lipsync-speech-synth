@@ -78,14 +78,25 @@ function createWordToVisemeMapping(text) {
     };
 
     const newDurations = getSequenceDurations(phonemes);
-    const durationModifier = selectedLanguage === "es" ? 0.66 : 1;
+    const durationModifier = selectedLanguage === "es" ? 0.8 : 1.1;
 
     mapping[charIndex].phonemes.forEach((phoneme, i) => {
-      const viseme = convertPhonemesToVisemes(phoneme) || "REST";
-      mapping[charIndex].visemes.push(viseme);
-      mapping[charIndex].durations.push(
-        newDurations[i].duration * durationModifier
-      );
+      const visemeResult = convertPhonemesToVisemes(phoneme) || "REST";
+      const phonemeDuration = newDurations[i].duration * durationModifier;
+
+      // Handle both single visemes and diphthong viseme arrays
+      if (Array.isArray(visemeResult)) {
+        // Diphthong: split duration between the two visemes
+        const diphthongDuration = phonemeDuration / visemeResult.length;
+        visemeResult.forEach((viseme) => {
+          mapping[charIndex].visemes.push(viseme);
+          mapping[charIndex].durations.push(diphthongDuration);
+        });
+      } else {
+        // Single viseme
+        mapping[charIndex].visemes.push(visemeResult);
+        mapping[charIndex].durations.push(phonemeDuration);
+      }
     });
 
     charIndex += word.length + 1; // +1 for space
@@ -189,3 +200,47 @@ function init() {
   updateSpeechRateDisplay();
 }
 init();
+
+// Test function for diphthong handling
+function testDiphthongHandling() {
+  console.log("=== Testing Diphthong Handling ===");
+
+  // Test words with diphthongs
+  const testWords = ["times", "how", "boy", "go", "day"];
+
+  testWords.forEach((word) => {
+    console.log(`\n--- Testing word: "${word}" ---`);
+
+    // Get phonemes
+    const phonemes = convertWordToPhonemesInEnglish(word);
+    console.log("Phonemes:", phonemes);
+
+    // Test each phoneme's viseme conversion
+    phonemes.forEach((phoneme, i) => {
+      const visemeResult = convertPhonemesToVisemes(phoneme);
+      const isDiphthong = Array.isArray(visemeResult);
+
+      console.log(
+        `Phoneme ${i + 1}: ${phoneme} -> ${
+          isDiphthong
+            ? `[${visemeResult.join(", ")}] (diphthong)`
+            : visemeResult
+        }`
+      );
+    });
+
+    // Test full word mapping
+    const mapping = createWordToVisemeMapping(word);
+    const wordData = mapping[0];
+    console.log("Full mapping:");
+    console.log("- Phonemes:", wordData.phonemes);
+    console.log("- Visemes:", wordData.visemes);
+    console.log(
+      "- Durations:",
+      wordData.durations.map((d) => Math.round(d) + "ms")
+    );
+  });
+}
+
+// Make it available globally for testing
+window.testDiphthongHandling = testDiphthongHandling;
