@@ -290,7 +290,7 @@ function convertPhonemesToVisemes(phoneme) {
     L: "L",
     R: "R",
     Y: "E",
-    W: "W",
+    W: "U",
     CH: "SH",
     JH: "SH",
     "": "REST",
