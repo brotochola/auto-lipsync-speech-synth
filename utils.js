@@ -1,11 +1,9 @@
 // Initialize converter
 let phonemeConverter = new PhonemeConverter();
 
-function convertWordToPhonemes(word) {
+function convertWordToPhonemesInEnglish(word) {
   const arrRet = [];
   const phonemesResult = TextToIPA.lookup(word);
-
-  console.log("phonemesResult", phonemesResult);
 
   if (!phonemesResult.error || phonemesResult.error == "multi") {
     for (let i = 0; i < phonemesResult.text.length; i++) {
@@ -88,91 +86,101 @@ function ipaToArpabet(ipa) {
   return arpabet;
 }
 
-function getPhonemeCategory(phoneme) {
-  const vowels = [
-    "AH",
-    "EH",
-    "IH",
-    "OH",
-    "UH",
-    "AA",
-    "AE",
-    "AO",
-    "AW",
-    "AY",
-    "EY",
-    "IY",
-    "OW",
-    "OY",
-    "UW",
-  ];
-  const consonants = [
-    "B",
-    "CH",
-    "D",
-    "DH",
-    "F",
-    "G",
-    "HH",
-    "JH",
-    "K",
-    "L",
-    "M",
-    "N",
-    "NG",
-    "P",
-    "R",
-    "S",
-    "SH",
-    "T",
-    "TH",
-    "V",
-    "W",
-    "Y",
-    "Z",
-    "ZH",
-  ];
+// function getPhonemeCategory(phoneme) {
+//   const vowels = [
+//     "AH",
+//     "EH",
+//     "IH",
+//     "OH",
+//     "UH",
+//     "AA",
+//     "AE",
+//     "AO",
+//     "AW",
+//     "AY",
+//     "EY",
+//     "IY",
+//     "OW",
+//     "OY",
+//     "UW",
+//   ];
+//   const consonants = [
+//     "B",
+//     "CH",
+//     "D",
+//     "DH",
+//     "F",
+//     "G",
+//     "HH",
+//     "JH",
+//     "K",
+//     "L",
+//     "M",
+//     "N",
+//     "NG",
+//     "P",
+//     "R",
+//     "S",
+//     "SH",
+//     "T",
+//     "TH",
+//     "V",
+//     "W",
+//     "Y",
+//     "Z",
+//     "ZH",
+//   ];
 
-  if (
-    !phoneme ||
-    phoneme.toLowerCase() === "silence" ||
-    phoneme.toLowerCase() === "rest"
-  ) {
-    return "silence";
-  }
+//   if (
+//     !phoneme ||
+//     phoneme.toLowerCase() === "silence" ||
+//     phoneme.toLowerCase() === "rest"
+//   ) {
+//     return "silence";
+//   }
 
-  if (vowels.includes(phoneme.toUpperCase())) {
-    return "vowels";
-  }
+//   if (vowels.includes(phoneme.toUpperCase())) {
+//     return "vowels";
+//   }
 
-  if (consonants.includes(phoneme.toUpperCase())) {
-    return "consonants";
-  }
+//   if (consonants.includes(phoneme.toUpperCase())) {
+//     return "consonants";
+//   }
 
-  // Default fallback based on common patterns
-  if (
-    phoneme.includes("AH") ||
-    phoneme.includes("EH") ||
-    phoneme.includes("IH") ||
-    phoneme.includes("OH") ||
-    phoneme.includes("UH")
-  ) {
-    return "vowels";
-  }
+//   // Default fallback based on common patterns
+//   if (
+//     phoneme.includes("AH") ||
+//     phoneme.includes("EH") ||
+//     phoneme.includes("IH") ||
+//     phoneme.includes("OH") ||
+//     phoneme.includes("UH")
+//   ) {
+//     return "vowels";
+//   }
 
-  return "consonants";
-}
+//   return "consonants";
+// }
 
-function getPhonemeDuration(phoneme) {
-  const phonemeDurations = {
-    vowels: 133,
-    consonants: 66,
-    silence: 43,
-  };
+// function getPhonemeDuration(phoneme, lang = "en-us") {
+//   console.log("#####", phoneme, lang);
+//   lang = lang.toLowerCase().substring(0, 2);
 
-  const category = getPhonemeCategory(phoneme);
-  return phonemeDurations[category];
-}
+//   const phonemeDurations = {
+//     en: {
+//       vowels: 133,
+//       consonants: 66,
+//       silence: 43,
+//     },
+//     es: {
+//       vowels: 100,
+//       consonants: 50,
+//       silence: 33,
+//     },
+//   };
+
+//   const category = getPhonemeCategory(phoneme);
+//   return phonemeDurations[lang][category];
+// }
 
 function convertPhonemesToVisemes(phoneme) {
   const phonemeToVisemeMap = {
@@ -336,4 +344,42 @@ function convertWordToPhonemesWithNoDictionary(word) {
   }
 
   return phonemes;
+}
+
+function convertNumbersToWords(text, lang = "en-us") {
+  lang = lang.toLowerCase().substring(0, 2);
+  let words = text.trim().split(/\s+/);
+  const wordsRet = [];
+
+  const functionToConvertNumbersToWords =
+    lang === "es" ? convertirDeNumeroALetras : convertNumbersToEnglishWords;
+
+  words = words.map((word) => {
+    // Store original punctuation and case
+    const punctuation = word.match(/[^\w\s]/g) || [];
+    const originalCase = word.match(/[A-Z]/g) || [];
+    let wordWithoutPunctuation = word.replace(/[^\w\s]/g, "");
+
+    if (!isNaN(wordWithoutPunctuation)) {
+      // Convert number to words
+      wordWithoutPunctuation = functionToConvertNumbersToWords(
+        wordWithoutPunctuation.toLowerCase()
+      ).split(" ");
+      // Add back punctuation to the last word
+      if (punctuation.length > 0) {
+        wordWithoutPunctuation[wordWithoutPunctuation.length - 1] +=
+          punctuation.join("");
+      }
+      // Restore original case if there were uppercase letters
+      if (originalCase.length > 0) {
+        wordWithoutPunctuation = wordWithoutPunctuation.map(
+          (w) => w.charAt(0).toUpperCase() + w.slice(1)
+        );
+      }
+      wordsRet.push(wordWithoutPunctuation);
+    } else {
+      wordsRet.push(word);
+    }
+  });
+  return wordsRet.flat().join(" ");
 }

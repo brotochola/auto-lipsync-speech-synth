@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <script src="phonemeConverter.js"></script>
-
+    <script src="phonemeArrayToDurations.js"></script>
     <script src="utils.js"></script>
     <script src="text-to-ipa.js"></script>
+    <script src="texto_a_arpabet_spanish.js"></script>
+    <script src="numero-a-letras-esp.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"></script>
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -155,8 +158,21 @@
 
         <div class="input-section">
             <label for="textInput">Text to Convert:</label>
-            <textarea id="textInput"
-                placeholder="Enter the text you want to convert to lipsync animation...">The New York Times is an American daily newspaper based in New York City. The New York Times covers domestic, national, and international news, and publishes opinion pieces, investigative reports, and reviews.</textarea>
+            <textarea id="textInput" placeholder="Enter the text you want to convert to lipsync animation...">
+
+
+                123 perros. 
+                7464756485 de personas.
+            </textarea>
+        </div>
+
+        <div class="input-section">
+            <label for="languageSelect">Language:</label>
+            <select id="languageSelect">
+                <option value="es-ES" selected>Spanish</option>
+                <option value="en-US">English</option>
+
+            </select>
         </div>
 
         <div class="input-section">
@@ -175,311 +191,13 @@
 
     </div>
 
-    <script type="module">
+    <script type="module" src="main.js"></script>
 
-        const phonemeDurations = {
-            'vowels': 90,
-            'consonants': 45,
-            'silence': 40
-        };
 
 
-        function addFunctionality() {
-            document.getElementById('generateLipsyncBtn').addEventListener('click', generateLipsync);
-            document.getElementById('testSpeechBtn').addEventListener('click', testSpeechWithAnimation);
-            document.getElementById('stopSpeechBtn').addEventListener('click', stopSpeech);
-        }
+    <script src="phaser_stuff.js"></script>
 
-        // Basic English phoneme to viseme mapping
 
 
-        const availableVisemes = ["A", "O", "E", "I", "U", "M", "F", "TH", "L", "S", "SH", "REST", "R", "W"]
-
-        // Helper function to categorize phonemes for duration calculation
-
-
-        let currentUtterance = null;
-        let animationData = null;
-        let currentVisemeIndex = 0;
-        let currentWord = null;
-        let wordToVisemeMap = [];
-        let isAnimating = false;
-
-        function updateSpeechRateDisplay() {
-            document.getElementById('speechRateValue').textContent = document.getElementById('speechRate').value;
-        }
-
-
-
-        function createWordToVisemeMapping(text) {
-            const words = text.toLowerCase().split(/\s+/);
-            const mapping = {}
-            let charIndex = 0;
-
-
-            for (let word of words) {
-                const wordWithoutPunctuation = word.replace(/[^\w\s]/g, '').toLowerCase()
-
-                mapping[charIndex] = {
-                    word: word,
-                    phonemes: convertWordToPhonemes(wordWithoutPunctuation),
-                    visemes: [],
-                    durations: []
-                }
-
-
-                mapping[charIndex].phonemes.forEach(phoneme => {
-                    const viseme = convertPhonemesToVisemes(phoneme) || 'REST'
-                    mapping[charIndex].visemes.push(viseme);
-                    mapping[charIndex].durations.push(getPhonemeDuration(phoneme));
-                });
-
-
-
-
-
-
-
-                charIndex += word.length + 1; // +1 for space
-            }
-
-            return mapping;
-        }
-        window.createWordToVisemeMapping = createWordToVisemeMapping
-
-
-        function removeConsecutiveDuplicates(arr) {
-            if (!arr || arr.length === 0) {
-                return [];
-            }
-            const result = [arr[0]];
-            for (let i = 1; i < arr.length; i++) {
-                if (arr[i] !== arr[i - 1]) {
-                    result.push(arr[i]);
-                }
-            }
-            return result;
-        }
-        function generateLipsync() {
-            const text = document.getElementById('textInput').value;
-            const speechRate = parseFloat(document.getElementById('speechRate').value);
-
-            if (!text.trim()) {
-                alert('Please enter some text to convert.');
-                return;
-            }
-
-            wordToVisemeMap = createWordToVisemeMapping(text);
-
-
-
-
-
-        }
-
-
-
-
-
-
-
-
-
-
-        function testSpeechWithAnimation() {
-            const text = document.getElementById('textInput').value;
-            const speechRate = parseFloat(document.getElementById('speechRate').value);
-
-            if (!text.trim()) {
-                alert('Please enter some text to speak.');
-                return;
-            }
-
-            // Make sure we have generated the lipsync data
-            if (!wordToVisemeMap.length) {
-                generateLipsync();
-            }
-
-            currentUtterance = new SpeechSynthesisUtterance(text);
-            currentUtterance.rate = speechRate;
-            currentUtterance.lang = "en-US";
-
-
-
-
-
-
-            window.currentUtterance = currentUtterance
-
-            currentVisemeIndex = 0;
-            isAnimating = true;
-
-            currentUtterance.onstart = () => {
-                document.getElementById('testSpeechBtn').disabled = true;
-                document.getElementById('stopSpeechBtn').disabled = false;
-                console.log('Speech and animation started');
-            };
-
-
-
-            currentUtterance.onboundary = (event) => {
-
-
-                if (event.name === 'word') {
-                    animateWordInMouth(wordToVisemeMap[event.charIndex])
-                } else {
-                    animateWordInMouth(null)
-                }
-
-
-
-            };
-
-            currentUtterance.onend = () => {
-                document.getElementById('testSpeechBtn').disabled = false;
-                document.getElementById('stopSpeechBtn').disabled = true;
-                isAnimating = false;
-
-                console.log('Speech and animation ended');
-            };
-
-
-            console.log('Current utterance:', currentUtterance);
-
-            speechSynthesis.speak(currentUtterance);
-        }
-
-
-
-        function stopSpeech() {
-            if (currentUtterance) {
-                speechSynthesis.cancel();
-                document.getElementById('testSpeechBtn').disabled = false;
-                document.getElementById('stopSpeechBtn').disabled = true;
-            }
-        }
-
-        // Initialize  
-        function init() {
-            TextToIPA.loadDict("ipadict.txt", () => {
-                console.log("loaded")
-
-                // Initialize functionality after data is loaded
-                addFunctionality();
-
-                // Generate initial example
-                generateLipsync();
-            })
-            document.getElementById('speechRate').addEventListener('input', updateSpeechRateDisplay);
-            updateSpeechRateDisplay();
-
-        }
-        init()
-
-    </script>
-
-
-
-    <script>
-        // Phaser game configuration
-        const config = {
-            type: Phaser.AUTO,
-            width: 400,
-            height: 400,
-            parent: 'phaser-game',
-            backgroundColor: '#34495e',
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            }
-        };
-        let mouthSprite;
-        let scene;
-
-        function preload() {
-            scene = this;
-
-            // Load all mouth textures
-            const visemes = ['a', 'e', 'f', 'l', 'm', 'o', 'r', 's', 'sh', 'th', 'u', "rest"];
-
-            visemes.forEach(viseme => {
-                this.load.image(`mouth_${viseme}`, `./mouths/${viseme}.png`);
-            });
-
-
-        }
-
-        function create() {
-            mouthSprite = this.add.sprite(200, 200, 'mouth_rest');
-
-        }
-        function updateMouth(viseme) {
-            // Convert viseme to lowercase to match our texture names
-            const visemeKey = viseme.toLowerCase();
-
-            // Check if the texture exists before setting it
-
-
-            mouthSprite.setTexture(`mouth_${visemeKey}`);
-
-        }
-
-        function update() {
-
-        }
-        let arrOfTimeOuts = []
-
-        function animateWordInMouth(word) {
-
-            let currentVisemeIndex = 0;
-
-            for (let i = 0; i < arrOfTimeOuts.length; i++) {
-                clearTimeout(arrOfTimeOuts[i])
-            }
-            arrOfTimeOuts = []
-            console.log(word)
-
-            if (!word) {
-                updateMouth("rest")
-                return
-            }
-
-
-            let totalDuration = word.durations[0]
-
-            updateMouth(word.visemes[0])
-            for (let i = 1; i < word.visemes.length; i++) {
-
-                const timeoutObj = setTimeout(() => {
-                    updateMouth(word.visemes[i])
-                }, totalDuration)
-
-                arrOfTimeOuts.push(timeoutObj)
-                totalDuration += word.durations[i] / currentUtterance.rate
-            }
-            setTimeout(() => {
-                updateMouth("rest")
-            }, totalDuration)
-
-
-            /*
-            durations: Array [ 80, 120 ]
-​
-            phonemes: Array [ "DH", "AH" ]
-            ​
-            visemes: Array [ "TH", "A" ]
-            ​
-            word: "the"
-            */
-
-
-
-
-        }
-
-        const game = new Phaser.Game(config);
-
-    </script>
 </body>
 </html>
